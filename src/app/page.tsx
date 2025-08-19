@@ -9,6 +9,10 @@ export default function Home() {
   const [geoError, setGeoError] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [pinMessage, setPinMessage] = useState<string | null>(null);
+  const [history, setHistory] = useState<{
+    type: "in" | "out";
+    timestamp: Date;
+  }[]>([]);
   const isPinValid = pin === user.pin;
 
   useEffect(() => {
@@ -19,7 +23,12 @@ export default function Home() {
   const handleClock = (type: "in" | "out") => {
     if (!isPinValid) return;
     setPinMessage(`${user.name} clocked ${type}.`);
+    setHistory((prev) => [...prev, { type, timestamp: new Date() }]);
   };
+
+  const todayHistory = history.filter(
+    (r) => r.timestamp.toDateString() === now.toDateString()
+  );
 
   useEffect(() => {
     if (!("geolocation" in navigator)) {
@@ -86,6 +95,19 @@ export default function Home() {
           >
             🔴 Clock Out
           </button>
+        </div>
+        <div className="mt-6 w-full max-w-sm">
+          <h2 className="mb-2 font-medium">Today&apos;s History</h2>
+          <ul className="space-y-1 text-left">
+            {todayHistory.map((record, idx) => (
+              <li key={idx}>
+                {record.type === "in" ? "🟢" : "🔴"} Clock {record.type} at {record.timestamp.toLocaleTimeString()}
+              </li>
+            ))}
+            {todayHistory.length === 0 && (
+              <li className="text-gray-500">No records yet.</li>
+            )}
+          </ul>
         </div>
       </div>
     </div>
