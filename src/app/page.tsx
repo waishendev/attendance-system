@@ -1,16 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { user } from "@/data/user";
 
 export default function Home() {
   const [now, setNow] = useState(new Date());
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [pinMessage, setPinMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleClock = (type: "in" | "out") => {
+    if (pin !== user.pin) {
+      setPinError("Invalid PIN");
+      setPinMessage(null);
+      return;
+    }
+
+    setPinError(null);
+    setPinMessage(`${user.name} clocked ${type}.`);
+  };
 
   useEffect(() => {
     if (!("geolocation" in navigator)) {
@@ -51,13 +66,30 @@ export default function Home() {
         </div>
       )}
       {geoError && <div className="text-red-600">{geoError}</div>}
-      <div className="mt-4 flex gap-4">
-        <button className="flex items-center gap-2 rounded bg-green-600 px-4 py-2 font-medium text-white">
-          🟢 Clock In
-        </button>
-        <button className="flex items-center gap-2 rounded bg-red-600 px-4 py-2 font-medium text-white">
-          🔴 Clock Out
-        </button>
+      <div className="mt-4 flex flex-col items-center gap-4">
+        <input
+          type="password"
+          value={pin}
+          onChange={(e) => setPin(e.target.value)}
+          placeholder="Enter PIN"
+          className="rounded border px-2 py-1"
+        />
+        {pinError && <div className="text-red-600">{pinError}</div>}
+        {pinMessage && <div className="text-green-600">{pinMessage}</div>}
+        <div className="flex gap-4">
+          <button
+            className="flex items-center gap-2 rounded bg-green-600 px-4 py-2 font-medium text-white"
+            onClick={() => handleClock("in")}
+          >
+            🟢 Clock In
+          </button>
+          <button
+            className="flex items-center gap-2 rounded bg-red-600 px-4 py-2 font-medium text-white"
+            onClick={() => handleClock("out")}
+          >
+            🔴 Clock Out
+          </button>
+        </div>
       </div>
     </div>
   );
