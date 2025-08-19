@@ -140,7 +140,7 @@ export default function CheckInPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-white flex items-center justify-center px-4 relative">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-white flex items-center justify-center sm:px-4 relative">
       <motion.div
         className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 space-y-6"
         initial={{ opacity: 0, y: 20 }}

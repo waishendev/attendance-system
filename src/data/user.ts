@@ -7,5 +7,5 @@ export interface User {
 export const user: User = {
   id: 'u_001',
   name: 'Demo User',
-  pin: '1234', // 改成你要的
+  pin: '3324', // 改成你要的
 };
