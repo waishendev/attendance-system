@@ -221,6 +221,7 @@ export default function CheckInPage() {
               required
               className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
               value={pin}
+              maxLength={6}
               onChange={(e) => setPin(e.target.value)}
               placeholder="Enter PIN"
               autoFocus
@@ -270,7 +271,7 @@ export default function CheckInPage() {
         </form>
 
         {/* 今日记录 */}
-        <div className="mt-4 rounded-lg bg-gray-200/20 p-4">
+        <div className="mt-4 rounded-lg bg-gray-200/20 border border-gray-500/20 shadow-md hover:shadow-lg transition-shadow p-4">
           <div className="font-semibold text-gray-700 mb-2 ">Today&apos;s Clock Records</div>
           <div className="space-y-1 max-h-20 overflow-y-auto pr-1">
             {todayLogs.length > 0 ? (
@@ -278,7 +279,7 @@ export default function CheckInPage() {
                 .slice()
                 .reverse()
                 .map((log) => (
-                  <div key={log.id} className="flex items-center justify-between text-sm">
+                  <div key={log.id} className="flex justify-between items-center text-sm px-2 py-1 rounded hover:bg-gray-100">
                     <span>
                       {log.check_type === 'in' ? '🟢 Clock In' : '🔴 Clock Out'}
                       {log.remarks ? ` · ${log.remarks}` : ''}
