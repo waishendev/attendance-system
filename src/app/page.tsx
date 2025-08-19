@@ -288,20 +288,35 @@ export default function CheckInPage() {
                 .slice()
                 .reverse()
                 .map((log) => (
-                  <div key={log.id} className="flex justify-between items-center text-sm px-2 py-1 rounded hover:bg-gray-100">
-                    <span>
-                      {log.check_type === 'in' ? '🟢 Clock In' : '🔴 Clock Out'}
-                      {log.remarks ? ` · ${log.remarks}` : ''}
-                    </span>
-                    <span>
-                      {new Date(log.check_time).toLocaleTimeString('en-GB', { hour12: false })}
-                    </span>
+                  <div
+                    key={log.id}
+                    className="px-2 py-1 text-sm border-b last:border-b-0 border-gray-300"
+                  >
+                    {/* 第一行：打卡状态 + 时间 */}
+                    <div className="flex justify-between items-center">
+                      <span>
+                        {log.check_type === 'in' ? '🟢 Clock In' : '🔴 Clock Out'}
+                      </span>
+                      <span>
+                        {new Date(log.check_time).toLocaleTimeString('en-GB', {
+                          hour12: false,
+                        })}
+                      </span>
+                    </div>
+                    {/* 第二行：仅当有 remarks 时显示 */}
+                    {log.remarks && (
+                      <div className="text-gray-500 text-xs mt-0.5 truncate">
+                        Remarks : {log.remarks}
+                      </div>
+                    )}
                   </div>
                 ))
             ) : (
               <div className="text-gray-500 text-sm">No clock records.</div>
             )}
           </div>
+
+
         </div>
       </motion.div>
     </div>
