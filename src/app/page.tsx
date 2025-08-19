@@ -21,7 +21,7 @@ export default function CheckInPage() {
   const isSubmitDisabled =
     pin.trim().length === 0 ||
     !address || 
-    address === 'Unable to retrieve address' || 
+    address === '❌ Failed to retrieve location' || 
     address === 'Loading...';
 
   // 时钟
@@ -30,6 +30,7 @@ export default function CheckInPage() {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
+
 
   // 初次定位（缓存坐标）
   useEffect(() => {
@@ -40,15 +41,19 @@ export default function CheckInPage() {
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
         };
-        console.log(pos.coords.latitude);
       },
       () => {
         console.warn('Failed to get location, fallback to default (22.3, 114.1)');
-        console.log(121);
+        // 👇 新增：显式标记失败
+        setAddress('❌ Failed to retrieve location');
+        // setErrorMessages((prev) =>
+        //   prev.includes('Failed to retrieve location') ? prev : ['Failed to retrieve location', ...prev]
+        // );
       },
       { timeout: 5000 }
     );
   }, []);
+
 
 
   // 获取地理位置
@@ -58,25 +63,29 @@ export default function CheckInPage() {
         const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lng}`);
         const data = await res.json();
         const cleanAddress = data.display_name?.replace(/[^\x00-\x7F]/g, '').trim();
-        return cleanAddress || 'Unable to retrieve address';
+        return cleanAddress || '❌ Failed to retrieve location';
       } catch {
-          return 'Unable to retrieve address';
+          return ' ❌ Failed to retrieve location';
         }
       };
 
       const watchId = navigator.geolocation.watchPosition(
-      async (pos) => {
-        const coords = pos.coords;
-        setLocation(coords);
-        const addr = await getAddressFromCoords(coords.latitude, coords.longitude);
-        setAddress(addr);
-      },
-      () => {
-    
-        // setLoading(false);
-      },
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
-    );
+        async (pos) => {
+          const coords = pos.coords;
+          setLocation(coords);
+          const addr = await getAddressFromCoords(coords.latitude, coords.longitude);
+          setAddress(addr);
+        },
+        () => {
+          // 👇 新增：显式标记失败
+          setAddress('❌ Failed to retrieve location');
+          // setErrorMessages((prev) =>
+          //   prev.includes('Failed to retrieve location') ? prev : ['Failed to retrieve location', ...prev]
+          // );
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+      );
+
 
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
