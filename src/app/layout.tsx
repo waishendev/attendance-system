@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Attendance System",
   description: "Simple clock in clock out system",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({

@@ -140,16 +140,22 @@ export default function CheckInPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-white flex items-center justify-center px-4 relative">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-white flex items-center justify-center px-3 sm:px-4 relative">
       <motion.div
-        className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 space-y-6"
+        className="w-full max-w-[420px] mx-auto bg-white rounded-2xl shadow-xl md:shadow-2xl p-6 md:p-8 space-y-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         {/* 错误条 */}
         {errorMessages.length > 0 && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm">
+          <motion.div
+            layout
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            aria-live="polite"
+            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm"
+          >
             {errorMessages.length === 1 ? (
               <div>
                 <strong className="font-semibold">Error:</strong> {errorMessages[0]}
@@ -164,23 +170,29 @@ export default function CheckInPage() {
                 ))}
               </>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* 成功提示 */}
         {successMessage && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm">
+          <motion.div
+            layout
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            aria-live="polite"
+            className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm"
+          >
             {successMessage}
-          </div>
+          </motion.div>
         )}
 
         {/* 时间日期块 */}
         {currentTime && (
-          <div className="text-center p-6 border-4 border-indigo-500 rounded-full shadow-lg bg-white space-y-2">
-            <div className="text-5xl font-semibold tracking-wider text-indigo-700">
+          <div className="text-center rounded-2xl px-4 py-5 md:p-6 md:rounded-full md:border-4 md:shadow-lg md:border-indigo-500 bg-white space-y-2">
+            <div className="text-4xl md:text-5xl font-semibold tracking-wider text-indigo-700 whitespace-nowrap">
               {currentTime.toLocaleTimeString('en-GB', { hour12: false })}
             </div>
-            <div className="text-lg text-gray-600">
+            <div className="text-sm md:text-base text-gray-600">
               {currentTime.toLocaleDateString('en-GB', {
                 weekday: 'short',
                 month: 'short',
@@ -192,10 +204,10 @@ export default function CheckInPage() {
         )}
 
         {/* 位置显示 */}
-        <div className=" text-sm space-y-1">
+        <div className="text-sm space-y-1">
           <div className="text-gray-600">📍 Current Location:</div>
           <div
-            className={`font-medium ${
+            className={`font-medium break-words leading-relaxed line-clamp-2 ${
               address === '❌ Failed to retrieve location' ? 'text-red-600' : 'text-gray-800'
             }`}
           >
@@ -219,7 +231,7 @@ export default function CheckInPage() {
             <input
               type="password"
               required
-              className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
+              className="w-full border border-gray-300 rounded-lg h-11 px-3 text-base focus:ring-2 focus:ring-blue-400"
               value={pin}
               maxLength={6}
               onChange={(e) => setPin(e.target.value)}
@@ -230,12 +242,12 @@ export default function CheckInPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Check Type</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {(['in', 'out'] as CheckType[]).map((type) => (
                 <button
                   key={type}
                   type="button"
-                  className={`p-3 rounded-lg text-center text-xl font-semibold border ${
+                  className={`h-11 px-3 rounded-lg text-center text-lg font-semibold border focus:outline-none focus:ring-2 focus:ring-blue-400 ${
                     checkType === type ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'
                   }`}
                   onClick={() => setCheckType(type)}
@@ -250,7 +262,7 @@ export default function CheckInPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Remarks (optional)</label>
             <input
               type="text"
-              className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
+              className="w-full border border-gray-300 rounded-lg h-11 px-3 text-base focus:ring-2 focus:ring-blue-400"
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               placeholder="Enter remarks (optional)"
@@ -260,9 +272,9 @@ export default function CheckInPage() {
           <button
             type="submit"
             disabled={isSubmitDisabled}
-            className={`w-full py-4 rounded-lg text-2xl font-bold transition ${
+            className={`hidden md:block w-full h-12 rounded-lg text-2xl font-bold transition focus:outline-none focus:ring-2 focus:ring-blue-400 ${
               isSubmitDisabled
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                ? 'bg-gray-300 text-gray-500 pointer-events-none opacity-60'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
@@ -271,15 +283,18 @@ export default function CheckInPage() {
         </form>
 
         {/* 今日记录 */}
-        <div className="mt-4 rounded-lg bg-gray-200/20 border border-gray-500/20 shadow-md hover:shadow-lg transition-shadow p-4">
-          <div className="font-semibold text-gray-700 mb-2 ">Today&apos;s Clock Records</div>
-          <div className="space-y-1 max-h-20 overflow-y-auto pr-1">
+        <div className="mt-4 rounded-xl bg-white/90 border shadow-md p-4">
+          <div className="font-semibold text-gray-700 mb-2">Today&apos;s Clock Records</div>
+          <div className="space-y-1 max-h-[30vh] md:max-h-20 overflow-y-auto pr-1">
             {todayLogs.length > 0 ? (
               todayLogs
                 .slice()
                 .reverse()
                 .map((log) => (
-                  <div key={log.id} className="flex justify-between items-center text-sm px-2 py-1 rounded hover:bg-gray-100">
+                  <div
+                    key={log.id}
+                    className="flex justify-between items-center text-sm px-2 py-2 rounded -mx-2 hover:bg-gray-50 active:bg-gray-100"
+                  >
                     <span>
                       {log.check_type === 'in' ? '🟢 Clock In' : '🔴 Clock Out'}
                       {log.remarks ? ` · ${log.remarks}` : ''}
@@ -295,6 +310,24 @@ export default function CheckInPage() {
           </div>
         </div>
       </motion.div>
+
+      {/* Sticky Submit Button */}
+      <div className="md:hidden fixed inset-x-0 bottom-[env(safe-area-inset-bottom)] z-30 backdrop-blur bg-white/75 border-t pb-[env(safe-area-inset-bottom)]">
+        <div className="max-w-[420px] mx-auto px-4 py-3">
+          <button
+            type="button"
+            onClick={() => !isSubmitDisabled && handleSubmit()}
+            disabled={isSubmitDisabled}
+            className={`w-full h-12 rounded-lg text-2xl font-bold transition focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+              isSubmitDisabled
+                ? 'bg-gray-300 text-gray-500 pointer-events-none opacity-60'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            Submit
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
