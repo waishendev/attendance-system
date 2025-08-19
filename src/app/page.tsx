@@ -8,8 +8,8 @@ export default function Home() {
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [pin, setPin] = useState("");
-  const [pinError, setPinError] = useState<string | null>(null);
   const [pinMessage, setPinMessage] = useState<string | null>(null);
+  const isPinValid = pin === user.pin;
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -17,13 +17,7 @@ export default function Home() {
   }, []);
 
   const handleClock = (type: "in" | "out") => {
-    if (pin !== user.pin) {
-      setPinError("Invalid PIN");
-      setPinMessage(null);
-      return;
-    }
-
-    setPinError(null);
+    if (!isPinValid) return;
     setPinMessage(`${user.name} clocked ${type}.`);
   };
 
@@ -74,17 +68,20 @@ export default function Home() {
           placeholder="Enter PIN"
           className="rounded border px-2 py-1"
         />
-        {pinError && <div className="text-red-600">{pinError}</div>}
+        {pin && !isPinValid && <div className="text-red-600">Invalid PIN</div>}
+        {isPinValid && <div className="text-green-600">PIN validated</div>}
         {pinMessage && <div className="text-green-600">{pinMessage}</div>}
         <div className="flex gap-4">
           <button
-            className="flex items-center gap-2 rounded bg-green-600 px-4 py-2 font-medium text-white"
+            disabled={!isPinValid}
+            className="flex items-center gap-2 rounded bg-green-600 px-4 py-2 font-medium text-white disabled:opacity-50"
             onClick={() => handleClock("in")}
           >
             🟢 Clock In
           </button>
           <button
-            className="flex items-center gap-2 rounded bg-red-600 px-4 py-2 font-medium text-white"
+            disabled={!isPinValid}
+            className="flex items-center gap-2 rounded bg-red-600 px-4 py-2 font-medium text-white disabled:opacity-50"
             onClick={() => handleClock("out")}
           >
             🔴 Clock Out
