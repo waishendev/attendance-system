@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { user } from '@/data/user';
-import { addLog, getTodayLogs, type CheckType } from '@/data/history';
+import type { CheckType, ClockLog } from '@/data/history';
 
 export default function CheckInPage() {
   const [pin, setPin] = useState('');
@@ -16,6 +16,7 @@ export default function CheckInPage() {
   const [location, setLocation] = useState<GeolocationCoordinates | null>(null);
   const [address, setAddress] = useState('');
   const [todayLogsVersion, setTodayLogsVersion] = useState(0); // 触发刷新
+  const [todayLogs, setTodayLogs] = useState<ClockLog[]>([]);
 
   const isSubmitDisabled =
     pin.trim().length === 0 ||
@@ -80,6 +81,23 @@ export default function CheckInPage() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await fetch(`/api/clock/today?userId=${user.id}`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          setTodayLogs(Array.isArray(data.logs) ? data.logs : []);
+        } else {
+          setTodayLogs([]);
+        }
+      } catch {
+        setTodayLogs([]);
+      }
+    };
+    fetchLogs();
+  }, [todayLogsVersion]);
+
   const handleSubmit = async () => {
     // 清消息
     setSuccessMessage('');
@@ -95,8 +113,7 @@ export default function CheckInPage() {
     const lat = location?.latitude ?? cachedCoords.current.latitude;
     const lon = location?.longitude ?? cachedCoords.current.longitude;
 
-    // 写入日志（Demo 内存）
-    addLog({
+    const log: ClockLog = {
       id: String(Date.now()),
       userId: user.id,
       check_type: checkType,
@@ -105,15 +122,22 @@ export default function CheckInPage() {
       latitude: lat,
       longitude: lon,
       remarks: remarks || undefined,
-    });
+    };
 
-    setSuccessMessage(checkType === 'in' ? 'Clocked In successfully' : 'Clocked Out successfully');
-    setRemarks('');
-    setPin('');
-    setTodayLogsVersion((v) => v + 1); // 刷新历史
+    try {
+      await fetch('/api/clock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(log),
+      });
+      setSuccessMessage(checkType === 'in' ? 'Clocked In successfully' : 'Clocked Out successfully');
+      setRemarks('');
+      setPin('');
+      setTodayLogsVersion((v) => v + 1); // 刷新历史
+    } catch {
+      setErrorMessages((prev) => (prev.includes('Submit failed') ? prev : ['Submit failed', ...prev]));
+    }
   };
-
-  const todayLogs = getTodayLogs(user.id);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-white flex items-center justify-center px-4 relative">
