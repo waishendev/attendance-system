@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  attendance-system:
+    container_name: attendance-system-prod
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3050:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped

@@ -1,116 +1,275 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { user } from "@/data/user";
+import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { user } from '@/data/user';
+import { addLog, getTodayLogs, type CheckType } from '@/data/history';
 
-export default function Home() {
-  const [now, setNow] = useState(new Date());
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
-  const [geoError, setGeoError] = useState<string | null>(null);
-  const [pin, setPin] = useState("");
-  const [pinMessage, setPinMessage] = useState<string | null>(null);
-  const [history, setHistory] = useState<{
-    type: "in" | "out";
-    timestamp: Date;
-  }[]>([]);
-  const isPinValid = pin === user.pin;
+export default function CheckInPage() {
+  const [pin, setPin] = useState('');
+  const [checkType, setCheckType] = useState<CheckType>('in');
+  const [remarks, setRemarks] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const cachedCoords = useRef<{ latitude: number; longitude: number }>({ latitude: 22.3, longitude: 114.1 });
+  const [errorMessages, setErrorMessages] = useState<string[]>([]);
+  const [location, setLocation] = useState<GeolocationCoordinates | null>(null);
+  const [address, setAddress] = useState('');
+  const [todayLogsVersion, setTodayLogsVersion] = useState(0); // 触发刷新
 
+  const isSubmitDisabled =
+    pin.trim().length === 0 ||
+    !address || 
+    address === 'Unable to retrieve address' || 
+    address === 'Loading...';
+
+  // 时钟
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
+    setCurrentTime(new Date());
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  const handleClock = (type: "in" | "out") => {
-    if (!isPinValid) return;
-    setPinMessage(`${user.name} clocked ${type}.`);
-    setHistory((prev) => [...prev, { type, timestamp: new Date() }]);
-  };
-
-  const todayHistory = history.filter(
-    (r) => r.timestamp.toDateString() === now.toDateString()
-  );
-
+  // 初次定位（缓存坐标）
   useEffect(() => {
-    if (!("geolocation" in navigator)) {
-      setGeoError("Geolocation is not supported by your browser.");
-      return;
-    }
-
+    if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setCoords({ lat: latitude, lon: longitude });
+      (pos) => {
+        cachedCoords.current = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        };
+        console.log(pos.coords.latitude);
       },
-      (error) => {
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setGeoError("Location permission denied.");
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setGeoError("Location unavailable.");
-            break;
-          case error.TIMEOUT:
-            setGeoError("Location request timed out.");
-            break;
-          default:
-            setGeoError("An unknown error occurred.");
-        }
-      }
+      () => {
+        console.warn('Failed to get location, fallback to default (22.3, 114.1)');
+        console.log(121);
+      },
+      { timeout: 5000 }
     );
   }, []);
 
+
+  // 获取地理位置
+  useEffect(() => {
+    const getAddressFromCoords = async (lat: number, lng: number): Promise<string> => {
+      try {
+        const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lng}`);
+        const data = await res.json();
+        const cleanAddress = data.display_name?.replace(/[^\x00-\x7F]/g, '').trim();
+        return cleanAddress || 'Unable to retrieve address';
+      } catch {
+          return 'Unable to retrieve address';
+        }
+      };
+
+      const watchId = navigator.geolocation.watchPosition(
+      async (pos) => {
+        const coords = pos.coords;
+        setLocation(coords);
+        const addr = await getAddressFromCoords(coords.latitude, coords.longitude);
+        setAddress(addr);
+      },
+      () => {
+    
+        // setLoading(false);
+      },
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  const handleSubmit = async () => {
+    // 清消息
+    setSuccessMessage('');
+    setErrorMessages((prev) => prev.filter((m) => m !== 'Wrong PIN'));
+
+    // 校验 PIN
+    if (pin.trim() !== user.pin) {
+      setErrorMessages((prev) => (prev.includes('Wrong PIN') ? prev : ['Wrong PIN', ...prev]));
+      return;
+    }
+
+    // 取坐标
+    const lat = location?.latitude ?? cachedCoords.current.latitude;
+    const lon = location?.longitude ?? cachedCoords.current.longitude;
+
+    // 写入日志（Demo 内存）
+    addLog({
+      id: String(Date.now()),
+      userId: user.id,
+      check_type: checkType,
+      check_time: new Date().toISOString(),
+      address: address || undefined,
+      latitude: lat,
+      longitude: lon,
+      remarks: remarks || undefined,
+    });
+
+    setSuccessMessage(checkType === 'in' ? 'Clocked In successfully' : 'Clocked Out successfully');
+    setRemarks('');
+    setPin('');
+    setTodayLogsVersion((v) => v + 1); // 刷新历史
+  };
+
+  const todayLogs = getTodayLogs(user.id);
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 text-center">
-      <div className="text-6xl font-bold">{now.toLocaleTimeString()}</div>
-      <div className="text-xl">{now.toLocaleDateString()}</div>
-      {coords && (
-        <div className="text-lg">
-          📍 {coords.lat.toFixed(5)}, {coords.lon.toFixed(5)}
-        </div>
-      )}
-      {geoError && <div className="text-red-600">{geoError}</div>}
-      <div className="mt-4 flex flex-col items-center gap-4">
-        <input
-          type="password"
-          value={pin}
-          onChange={(e) => setPin(e.target.value)}
-          placeholder="Enter PIN"
-          className="rounded border px-2 py-1"
-        />
-        {pin && !isPinValid && <div className="text-red-600">Invalid PIN</div>}
-        {isPinValid && <div className="text-green-600">PIN validated</div>}
-        {pinMessage && <div className="text-green-600">{pinMessage}</div>}
-        <div className="flex gap-4">
-          <button
-            disabled={!isPinValid}
-            className="flex items-center gap-2 rounded bg-green-600 px-4 py-2 font-medium text-white disabled:opacity-50"
-            onClick={() => handleClock("in")}
-          >
-            🟢 Clock In
-          </button>
-          <button
-            disabled={!isPinValid}
-            className="flex items-center gap-2 rounded bg-red-600 px-4 py-2 font-medium text-white disabled:opacity-50"
-            onClick={() => handleClock("out")}
-          >
-            🔴 Clock Out
-          </button>
-        </div>
-        <div className="mt-6 w-full max-w-sm">
-          <h2 className="mb-2 font-medium">Today&apos;s History</h2>
-          <ul className="space-y-1 text-left">
-            {todayHistory.map((record, idx) => (
-              <li key={idx}>
-                {record.type === "in" ? "🟢" : "🔴"} Clock {record.type} at {record.timestamp.toLocaleTimeString()}
-              </li>
-            ))}
-            {todayHistory.length === 0 && (
-              <li className="text-gray-500">No records yet.</li>
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-white flex items-center justify-center px-4 relative">
+      <motion.div
+        className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 space-y-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* 错误条 */}
+        {errorMessages.length > 0 && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm">
+            {errorMessages.length === 1 ? (
+              <div>
+                <strong className="font-semibold">Error:</strong> {errorMessages[0]}
+              </div>
+            ) : (
+              <>
+                <strong className="font-semibold block mb-1">Errors:</strong>
+                {errorMessages.map((msg, idx) => (
+                  <div key={idx}>
+                    {idx + 1}. {msg}
+                  </div>
+                ))}
+              </>
             )}
-          </ul>
+          </div>
+        )}
+
+        {/* 成功提示 */}
+        {successMessage && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm">
+            {successMessage}
+          </div>
+        )}
+
+        {/* 时间日期块 */}
+        {currentTime && (
+          <div className="text-center p-6 border-4 border-indigo-500 rounded-full shadow-lg bg-white space-y-2">
+            <div className="text-5xl font-semibold tracking-wider text-indigo-700">
+              {currentTime.toLocaleTimeString('en-GB', { hour12: false })}
+            </div>
+            <div className="text-lg text-gray-600">
+              {currentTime.toLocaleDateString('en-GB', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 位置显示 */}
+        <div className=" text-sm space-y-1">
+          <div className="text-gray-600">📍 Current Location:</div>
+          <div
+            className={`font-medium ${
+              address === '❌ Failed to retrieve location' ? 'text-red-600' : 'text-gray-800'
+            }`}
+          >
+            {address || 'Loading...'}
+          </div>
         </div>
-      </div>
+
+
+        {/* 表单 */}
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!isSubmitDisabled) handleSubmit();
+          }}
+        >
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              PIN Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="password"
+              required
+              className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              placeholder="Enter PIN"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Check Type</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['in', 'out'] as CheckType[]).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={`p-3 rounded-lg text-center text-xl font-semibold border ${
+                    checkType === type ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}
+                  onClick={() => setCheckType(type)}
+                >
+                  {type.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Remarks (optional)</label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder="Enter remarks (optional)"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitDisabled}
+            className={`w-full py-4 rounded-lg text-2xl font-bold transition ${
+              isSubmitDisabled
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            Submit
+          </button>
+        </form>
+
+        {/* 今日记录 */}
+        <div className="mt-4 rounded-lg bg-gray-200/20 p-4">
+          <div className="font-semibold text-gray-700 mb-2 ">Today&apos;s Clock Records</div>
+          <div className="space-y-1 max-h-20 overflow-y-auto pr-1">
+            {todayLogs.length > 0 ? (
+              todayLogs
+                .slice()
+                .reverse()
+                .map((log) => (
+                  <div key={log.id} className="flex items-center justify-between text-sm">
+                    <span>
+                      {log.check_type === 'in' ? '🟢 Clock In' : '🔴 Clock Out'}
+                      {log.remarks ? ` · ${log.remarks}` : ''}
+                    </span>
+                    <span>
+                      {new Date(log.check_time).toLocaleTimeString('en-GB', { hour12: false })}
+                    </span>
+                  </div>
+                ))
+            ) : (
+              <div className="text-gray-500 text-sm">No clock records.</div>
+            )}
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
-
